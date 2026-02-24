@@ -11,6 +11,7 @@ import {
 } from "react-native";
 import { useState } from "react";
 import MoodPicker from "../components/MoodPicker";
+import { useMood } from "../context/MoodContext";
 
 function getFormattedDate() {
   const now = new Date();
@@ -26,29 +27,36 @@ function getFormattedDate() {
 export default function HomeScreen() {
   const [selectedMood, setSelectedMood] = useState(null);
   const [note, setNote] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
 
-  const handleSave = () => {
+  const { addMood } = useMood();
+
+  const handleSave = async () => {
     if (!selectedMood) {
       Alert.alert("Opps!", "Pilih mood kamu dulu ya 😊");
       return;
     }
 
-    const moodEntry = {
-      id: Date.now().toString(),
-      mood: selectedMood,
-      note: note.trim(),
-      date: new Date().toISOString(),
-    };
+    setIsSaving(true);
+    try {
+      await addMood({
+        id: Date.now().toString(),
+        mood: selectedMood,
+        note: note.trim(),
+        date: new Date().toISOString(),
+      });
 
-    console.log("Mood saved:", moodEntry);
-    Alert.alert(
-      "Tersimpan! 🎉",
-      `Mood "${selectedMood.label}" berhasil dicatat!`,
-    );
-
-    // Reset form
-    setSelectedMood(null);
-    setNote("");
+      Alert.alert(
+        "Tersimpan! 🎉",
+        `Mood "${selectedMood.label}" berhasil dicatat!`,
+      );
+      setSelectedMood(null);
+      setNote("");
+    } catch (error) {
+      Alert.alert("Error", "Gagal menyimpan mood. Coba lagi.");
+    } finally {
+      setIsSaving(false); // finally selalu dijalankan, error atau tidak
+    }
   };
 
   return (
@@ -107,6 +115,7 @@ export default function HomeScreen() {
             !selectedMood && styles.saveButtonDisabled,
           ]}
           onPress={handleSave}
+          disabled={isSaving}
           activeOpacity={0.8}
         >
           <Text style={styles.saveButtonText}>Simpan Mood</Text>
