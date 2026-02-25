@@ -1,7 +1,10 @@
-import { StyleSheet, StatusBar, Text } from "react-native";
 import { NavigationContainer } from "@react-navigation/native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { SafeAreaProvider } from "react-native-safe-area-context";
+import { StatusBar, Text } from "react-native";
+import { useEffect } from "react";
+import * as Notifications from "expo-notifications";
+
 import { MoodProvider } from "./context/MoodContext";
 import HomeScreen from "./screens/HomeScreen";
 import HistoryScreen from "./screens/HistoryScreen";
@@ -19,6 +22,20 @@ function TabIcon({ emoji, focused }) {
 }
 
 export default function App() {
+  useEffect(() => {
+    // Handler saat user TAP notifikasi (app sedang background/closed)
+    const subscription = Notifications.addNotificationResponseReceivedListener(
+      (response) => {
+        console.log("Notifikasi di-tap:", response);
+        // Di sini kamu bisa navigate ke screen tertentu
+        // misalnya langsung buka HomeScreen untuk catat mood
+      },
+    );
+
+    // Cleanup: hapus listener saat App component unmount
+    return () => subscription.remove();
+  }, []);
+
   return (
     // SafeAreaProvider harus membungkus seluruh app
     <SafeAreaProvider>
@@ -84,10 +101,3 @@ export default function App() {
     </SafeAreaProvider>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#F8F9FA",
-  },
-});
