@@ -1,16 +1,15 @@
 import * as Notifications from "expo-notifications";
-import { PLatform } from "react-native";
+import { Platform } from "react-native";
 
-// Konfigurasi bagaimana notifikasi ditampilkan saat app sedang buka
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
-    shouldShowAlert: true,
+    shouldShowBanner: true,
+    shouldShowList: true,
     shouldPlaySound: true,
     shouldSetBadge: false,
   }),
 });
 
-// Minta permission notifikasi dari user
 export async function requestNotificationPermission() {
   const { status: existingStatus } = await Notifications.getPermissionsAsync();
 
@@ -20,13 +19,24 @@ export async function requestNotificationPermission() {
   return status === "granted";
 }
 
-// Jalankan reminder harian
-export async function scheduleDailyReminder(hour = 20, minute = 0) {
-  // Hapus semua notifikasi yang sudah di jadwalkan sebelumnya
-  await Notifications.cancelAllScheduledNotificationsAsync();
+async function ensureAndroidChannel() {
+  if (Platform.OS !== "android") return;
+  await Notifications.setNotificationChannelAsync("default", {
+    name: "Default",
+    importance: Notifications.AndroidImportance.DEFAULT,
+    sound: true,
+  });
+}
 
+export async function scheduleDailyReminder(hour = 20, minute = 0) {
   const hasPermission = await requestNotificationPermission();
   if (!hasPermission) return false;
+
+  if (Platform.OS === "android") {
+    await ensureAndroidChannel();
+  }
+
+  await Notifications.cancelAllScheduledNotificationsAsync();
 
   await Notifications.scheduleNotificationAsync({
     content: {
@@ -38,18 +48,17 @@ export async function scheduleDailyReminder(hour = 20, minute = 0) {
       hour,
       minute,
       repeats: true, // Ulangi setiap hari
+      channelId: Platform.OS === "android" ? "default" : undefined,
     },
   });
 
   return true;
 }
 
-// Batalkan semua notifikasi
 export async function cancelAllReminders() {
   await Notifications.cancelAllScheduledNotificationsAsync();
 }
 
-// Cek apakah ada reminder yang aktif
 export async function getScheduledReminders() {
   return await Notifications.getAllScheduledNotificationsAsync();
 }
