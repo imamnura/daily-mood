@@ -23,18 +23,27 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.imamnura.dailymood"
+      "bundleIdentifier": "com.gemercik.dailymood"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#6C63FF"
       },
-      "permission": ["RECEIVE_BOOT_COMPLETED", "SCHEDULE_EXACT_ALARM"],
-      "edgeToEdgeEnabled": true
+      "permission": [
+        "RECEIVE_BOOT_COMPLETED",
+        "SCHEDULE_EXACT_ALARM"
+      ],
+      "edgeToEdgeEnabled": true,
+      "package": "com.gemercik.dailymood"
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "29c55e2e-da57-48f3-9b06-4dd6c2279c64"
+      }
     }
   }
 }
