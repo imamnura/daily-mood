@@ -6,13 +6,16 @@
     "start": "expo start",
     "android": "expo start --android",
     "ios": "expo start --ios",
-    "web": "expo start --web"
+    "web": "expo start --web",
+    "start-client": "expo start --dev-client"
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "2.2.0",
     "@react-navigation/bottom-tabs": "^7.14.0",
     "@react-navigation/native": "^7.1.28",
     "expo": "~54.0.33",
+    "expo-constants": "~16.0.2",
+    "expo-dev-client": "~6.0.20",
     "expo-haptics": "~15.0.8",
     "expo-notifications": "~0.32.16",
     "expo-status-bar": "~3.0.9",

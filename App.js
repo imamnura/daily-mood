@@ -3,7 +3,7 @@ import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { StatusBar, Text } from "react-native";
 import { useEffect } from "react";
-import * as Notifications from "expo-notifications";
+import Constants from "expo-constants";
 
 import { MoodProvider } from "./context/MoodContext";
 import HomeScreen from "./screens/HomeScreen";
@@ -23,17 +23,20 @@ function TabIcon({ emoji, focused }) {
 
 export default function App() {
   useEffect(() => {
-    // Handler saat user TAP notifikasi (app sedang background/closed)
-    const subscription = Notifications.addNotificationResponseReceivedListener(
-      (response) => {
+    let subscription;
+    const setup = async () => {
+      if (Constants?.appOwnership === "expo") return;
+      const { addNotificationResponseReceivedListener } = await import(
+        "expo-notifications"
+      );
+      subscription = addNotificationResponseReceivedListener((response) => {
         console.log("Notifikasi di-tap:", response);
-        // Di sini kamu bisa navigate ke screen tertentu
-        // misalnya langsung buka HomeScreen untuk catat mood
-      },
-    );
-
-    // Cleanup: hapus listener saat App component unmount
-    return () => subscription.remove();
+      });
+    };
+    setup();
+    return () => {
+      if (subscription) subscription.remove();
+    };
   }, []);
 
   return (
