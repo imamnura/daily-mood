@@ -6,11 +6,6 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
-    "splash": {
-      "image": "./assets/splash-icon.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#6C63FF"
-    },
     "plugins": [
       [
         "expo-notifications",
@@ -18,6 +13,16 @@
           "icon": "./assets/icon.png",
           "color": "#6C63FF",
           "sounds": []
+        }
+      ],
+      "expo-status-bar",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "resizeMode": "contain",
+          "backgroundColor": "#6C63FF",
+          "imageWidth": 200
         }
       ]
     ],
@@ -34,7 +39,6 @@
         "RECEIVE_BOOT_COMPLETED",
         "SCHEDULE_EXACT_ALARM"
       ],
-      "edgeToEdgeEnabled": true,
       "package": "com.gemercik.dailymood"
     },
     "web": {

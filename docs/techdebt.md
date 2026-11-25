@@ -13,7 +13,7 @@ Cakupan: seluruh source (`App.js`, `components/`, `context/`, `screens/`, `utils
 | `npx expo-doctor` | ✅ 18/18 check lulus |
 | `npx expo export` (Android & iOS) | ✅ bundle berhasil |
 | ESLint (`eslint:recommended` + `react-hooks`) | ✅ 0 error, 0 warning (di luar `console` yang dibungkus `__DEV__`) |
-| `npm audit` | ⚠️ 35 vulnerability transitif (2 critical, 16 high, 16 moderate, 1 low) — setelah TD-01: 24 (0 critical, 3 high) |
+| `npm audit` | ⚠️ 35 vulnerability transitif (2 critical, 16 high, 16 moderate, 1 low) — setelah TD-01: 24 (0 critical, 3 high); setelah TD-02: 10 (0 high, 3 moderate, 7 low) |
 | Test otomatis | ❌ tidak ada |
 
 ## Ringkasan
@@ -74,6 +74,30 @@ build/dev** (Metro, Expo CLI) dan tidak ikut ke bundle aplikasi, sehingga dimasu
   `@react-navigation/*` juga tertinggal minor (7.14 → 7.22, 7.1 → 7.5).
 - **Aksi:** upgrade bertahap satu SDK per langkah (`npx expo install expo@^55 --fix`, dst.), baca changelog
   `expo-notifications` di setiap langkah karena API trigger pernah berubah (SDK 52).
+- **Status (2026-11-25): ✅ selesai** — branch `fix/td-02-expo-sdk` (bercabang dari `fix/td-01-npm-audit`).
+  - Upgrade bertahap 54 → 55 → 56 → 57 → 58 (`npx expo install expo@~5x` lalu `npx expo install --fix`),
+    `expo-doctor` dijalankan di setiap langkah.
+  - Hasil: `expo@58.0.26`, `react-native@0.88.1`, `react@19.3.0`, `expo-notifications@58.1.9`,
+    `react-native-screens@4.30`, `react-native-safe-area-context@5.11`, `@react-navigation/native@7.5.2`,
+    `@react-navigation/bottom-tabs@7.22.0`.
+  - Perubahan `app.json` yang diwajibkan SDK baru:
+    - SDK 55: `android.edgeToEdgeEnabled` dihapus (edge-to-edge kini selalu aktif, field ditolak skema).
+    - SDK 56: field `splash` di level atas dihapus dari skema → dipindah ke config plugin
+      `expo-splash-screen` (paket baru, gambar/warna/`resizeMode` sama, `imageWidth: 200`).
+    - Plugin `expo-status-bar` ditambahkan otomatis oleh `expo install`.
+  - `expo-notifications`: semua API yang dipakai (`setNotificationHandler` dengan `shouldShowBanner`/`shouldShowList`,
+    trigger `SchedulableTriggerInputTypes.DAILY`, `AndroidImportance`, `addNotificationResponseReceivedListener`)
+    masih tersedia dan tidak deprecated — tidak ada perubahan kode.
+  - SDK 56 sempat ditandai `expo-doctor` terkena regresi memori Hermes V1; hilang di SDK 57+ (RN ≥ 0.86.2).
+  - `npm audit`: **24 → 10** (high 3 → 0, moderate 14 → 3, low 7). Sisa:
+    - `minimatch` (moderate, via `@expo/fingerprint` di `expo@58`) → menunggu rilis upstream; saran
+      `npm audit fix --force` adalah downgrade ke `expo@52`, jangan dipakai.
+    - `fast-xml-parser` (low, rantai `@react-native-community/cli`) → hilang saat paket itu dihapus (TD-17).
+  - Verifikasi: `npx expo-doctor` 20/20 lulus, `npx expo install --check` up to date,
+    `npx expo export` Android & iOS berhasil (907 / 923 modul), `npx expo config --type prebuild` valid.
+  - Belum dilakukan: build dev client (EAS) + uji manual di perangkat — **wajib** sebelum merge karena
+    ini upgrade native (RN 0.81 → 0.88). Fokus uji: notifikasi harian (izin, jadwal, tap), splash screen,
+    tab bar & safe area dengan edge-to-edge, haptics.
 
 ### TD-03 — Tidak ada test sama sekali
 - **Lokasi:** seluruh proyek (tidak ada runner, config, maupun file `*.test.*`)
@@ -202,7 +226,7 @@ build/dev** (Metro, Expo CLI) dan tidak ikut ke bundle aplikasi, sehingga dimasu
 2. **Sprint berikutnya:** TD-03 (setup test + test untuk `date.js` & `storage.js`), lalu TD-04 dan TD-05
    (konstanta mood tunggal + `useMoodStats`) karena saling terkait dan menyentuh data pengguna.
 3. **Berikutnya:** TD-06 s.d. TD-10 (notifikasi, storage, skema data) dalam satu paket refactor data layer.
-4. **Kuartal ini:** TD-02 (upgrade SDK bertahap), TD-12 (TypeScript), TD-13 (aksesibilitas), TD-14 (theme).
+4. **Kuartal ini:** ~~TD-02 (upgrade SDK bertahap)~~ ✅, TD-12 (TypeScript), TD-13 (aksesibilitas), TD-14 (theme).
 5. **Oportunistik:** TD-15 s.d. TD-21 saat menyentuh file terkait.
 
 ## Riwayat Perbaikan Terkait
