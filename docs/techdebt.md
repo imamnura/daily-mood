@@ -13,7 +13,7 @@ Cakupan: seluruh source (`App.js`, `components/`, `context/`, `screens/`, `utils
 | `npx expo-doctor` | ✅ 18/18 check lulus |
 | `npx expo export` (Android & iOS) | ✅ bundle berhasil |
 | ESLint (`eslint:recommended` + `react-hooks`) | ✅ 0 error, 0 warning (di luar `console` yang dibungkus `__DEV__`) |
-| `npm audit` | ⚠️ 35 vulnerability transitif (2 critical, 16 high, 16 moderate, 1 low) |
+| `npm audit` | ⚠️ 35 vulnerability transitif (2 critical, 16 high, 16 moderate, 1 low) — setelah TD-01: 24 (0 critical, 3 high) |
 | Test otomatis | ❌ tidak ada |
 
 ## Ringkasan
@@ -52,6 +52,21 @@ build/dev** (Metro, Expo CLI) dan tidak ikut ke bundle aplikasi, sehingga dimasu
   diperbaiki dengan upgrade major Expo.
 - **Aksi:** jalankan `npm audit fix` (tanpa `--force`) di branch terpisah, lalu verifikasi dengan
   `npx expo-doctor` + build dev client. Sisanya diselesaikan lewat upgrade SDK (TD-02).
+- **Status (2026-11-25): ✅ sebagian selesai** — branch `fix/td-01-npm-audit`.
+  - `npm audit fix` **tidak dipakai**: di npm 11 perintah itu memasang `expo@58` + `@expo/cli@58` bersarang
+    di bawah `expo@54` (33 paket duplikat), berisiko membuat CLI membaca config SDK yang salah.
+  - Sebagai gantinya: `npm update` terarah untuk paket transitif yang rentan saja (`shell-quote`,
+    `fast-xml-parser`, `ws`, `js-yaml`, `picomatch`, `brace-expansion`, `body-parser`, `launch-editor`,
+    `@xmldom/xmldom`, `@react-navigation/core`, `query-string`, `qs`, `yaml`, dll.). `package.json` tidak berubah.
+  - Hasil: **35 → 24** (critical 2 → 0, high 16 → 3, moderate 16 → 14, low 1 → 7*).
+    Verifikasi: `npx expo-doctor` 18/18 lulus, `npx expo export` Android & iOS berhasil.
+  - Sisa, tidak bisa diperbaiki tanpa perubahan major:
+    - `minimatch`, `glob`, `postcss` dan rantai `@expo/*` / `expo-*` → butuh Expo SDK 58 (TD-02).
+    - `image-size` (high, via `metro@0.83`) → fix ada di `image-size@2` (API berubah), ikut upgrade Metro di TD-02.
+    - 7 low di rantai `@react-native-community/cli` (`fast-xml-parser` lama) → hilang saat paket itu dihapus (TD-17).
+  - \* Low naik karena `fast-xml-parser` sudah diperbarui dari versi ber-advisory critical ke versi yang hanya tersisa
+    advisory low, dan npm menghitungnya juga pada 6 paket induk `@react-native-community/cli-*`; bukan temuan baru.
+  - Belum dilakukan: build dev client (EAS) — perlu dijalankan manual sebelum merge.
 
 ### TD-02 — Expo SDK tertinggal 4 versi major
 - **Lokasi:** `package.json`
