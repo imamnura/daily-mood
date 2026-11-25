@@ -7,7 +7,9 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "start-client": "expo start --dev-client"
+    "start-client": "expo start --dev-client",
+    "test": "jest",
+    "test:coverage": "jest --coverage"
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "2.2.0",
@@ -26,7 +28,10 @@
     "react-native-screens": "~4.30.1"
   },
   "devDependencies": {
-    "@react-native-community/cli": "20.1.1"
+    "@react-native-community/cli": "20.1.1",
+    "@testing-library/react-native": "^14.1.0",
+    "jest": "~30.5.2",
+    "jest-expo": "~58.0.15"
   },
   "private": true
 }

@@ -14,7 +14,7 @@ Cakupan: seluruh source (`App.js`, `components/`, `context/`, `screens/`, `utils
 | `npx expo export` (Android & iOS) | ✅ bundle berhasil |
 | ESLint (`eslint:recommended` + `react-hooks`) | ✅ 0 error, 0 warning (di luar `console` yang dibungkus `__DEV__`) |
 | `npm audit` | ⚠️ 35 vulnerability transitif (2 critical, 16 high, 16 moderate, 1 low) — setelah TD-01: 24 (0 critical, 3 high); setelah TD-02: 10 (0 high, 3 moderate, 7 low) |
-| Test otomatis | ❌ tidak ada |
+| Test otomatis | ❌ tidak ada — setelah TD-03: ✅ 42 test (Jest + RNTL); `date.js`, `storage.js`, `MoodContext`, `MoodPicker` 100% line |
 
 ## Ringkasan
 
@@ -108,6 +108,29 @@ build/dev** (Metro, Expo CLI) dan tidak ikut ke bundle aplikasi, sehingga dimasu
   1. `calculateStreak` (hari ini kosong tapi kemarin ada, entri 00:00–06:59 WIB, duplikat per hari)
   2. `saveMood`/`deleteMood` saat storage korup → harus throw, bukan menimpa data
   3. Statistik Insight (top mood, rata-rata) setelah diekstrak (TD-05)
+- **Status (2026-11-25): ✅ selesai untuk prioritas 1 & 2** — branch `fix/td-03-tests` (dari `fix/td-02-expo-sdk`).
+  - Tooling: `jest@30` + `jest-expo@58` + `@testing-library/react-native@14` (devDependencies), script
+    `npm test` dan `npm run test:coverage`, config di `jest.config.js`.
+    - `test/globalSetup.js` mengunci `TZ=Asia/Jakarta` agar test tanggal deterministik di mesin/CI mana pun.
+    - `test/setup.js` memakai mock resmi AsyncStorage (in-memory).
+    - `moduleNameMapper` untuk `expo-modules-core`: npm memasangnya di `node_modules/expo/node_modules`
+      (tidak di-hoist) sementara preset `jest-expo` me-require dari root. Path di-resolve dari paket `expo`.
+  - 42 test di 4 file:
+    - `utils/__tests__/date.test.js` — `toLocalDateKey` (tanggal lokal vs UTC, padding) dan `calculateStreak`
+      (hari ini kosong tapi kemarin ada, bolong, duplikat per hari, entri 00:00–06:59 WIB, batas bulan/tahun).
+    - `utils/__tests__/storage.test.js` — `getMoods` aman saat korup/gagal baca; `saveMood`/`deleteMood`
+      **throw dan tidak memanggil `setItem`** saat JSON korup, data bukan array, atau baca gagal;
+      `formatDate`/`formatTime` (locale `id-ID`).
+    - `context/__tests__/MoodContext.test.jsx` — load awal, `addMood`/`removeMood` sinkron ke storage,
+      `useMood` di luar provider, dan histori korup tidak tertimpa lewat `addMood`.
+    - `components/__tests__/MoodPicker.test.jsx` — render 5 mood, callback + haptic saat ditekan, label terpilih.
+  - Coverage: `utils/date.js`, `utils/storage.js`, `MoodContext`, `MoodPicker` 100% line; screen &
+    `notifications.js` masih 0% (total 39.7% line).
+  - Uji mutasi manual: mengembalikan `toLocalDateKey` ke `toISOString()` → 7 test gagal; membuat jalur tulis
+    menelan error korup → 6 test gagal.
+  - `npm audit` naik 10 → 29 karena `glob`/`minimatch` lama di rantai Jest (moderate, dev-only, tidak masuk bundle).
+  - **Sisa:** prioritas 3 (statistik Insight) menunggu ekstraksi `useMoodStats` di TD-05; `notifications.js`
+    dan screen belum punya test.
 
 ### TD-04 — Definisi mood terduplikasi di 3 tempat dan dicocokkan via `label`
 - **Lokasi:** `components/MoodPicker.jsx:13` (`MOODS`), `screens/InsightScreen.jsx:22` (`MOODS_META`),
@@ -223,7 +246,7 @@ build/dev** (Metro, Expo CLI) dan tidak ikut ke bundle aplikasi, sehingga dimasu
 ## Rekomendasi Urutan Pengerjaan
 
 1. **Segera:** TD-01 (`npm audit fix` non-breaking) dan TD-11 (lint/format di repo) — murah, mencegah regresi.
-2. **Sprint berikutnya:** TD-03 (setup test + test untuk `date.js` & `storage.js`), lalu TD-04 dan TD-05
+2. **Sprint berikutnya:** ~~TD-03 (setup test + test untuk `date.js` & `storage.js`)~~ ✅, lalu TD-04 dan TD-05
    (konstanta mood tunggal + `useMoodStats`) karena saling terkait dan menyentuh data pengguna.
 3. **Berikutnya:** TD-06 s.d. TD-10 (notifikasi, storage, skema data) dalam satu paket refactor data layer.
 4. **Kuartal ini:** ~~TD-02 (upgrade SDK bertahap)~~ ✅, TD-12 (TypeScript), TD-13 (aksesibilitas), TD-14 (theme).
