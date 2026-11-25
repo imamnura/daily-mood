@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react-native";
 import * as Haptics from "expo-haptics";
 import MoodPicker from "../MoodPicker";
+import { getMoodById } from "../../constants/moods";
 
 jest.mock("expo-haptics");
 
@@ -31,7 +32,8 @@ describe("MoodPicker", () => {
     await fireEvent.press(screen.getByText("😢"));
 
     expect(onSelectMood).toHaveBeenCalledTimes(1);
-    expect(onSelectMood).toHaveBeenCalledWith({
+    expect(onSelectMood).toHaveBeenCalledWith(getMoodById(5));
+    expect(onSelectMood.mock.calls[0][0]).toMatchObject({
       id: 5,
       emoji: "😢",
       label: "Awful",

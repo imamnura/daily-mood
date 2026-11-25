@@ -20,6 +20,7 @@ module.exports = {
     "^expo-modules-core/(.*)$": `${expoModulesCoreDir}/$1`,
   },
   collectCoverageFrom: [
+    "constants/**/*.js",
     "utils/**/*.js",
     "context/**/*.{js,jsx}",
     "components/**/*.{js,jsx}",

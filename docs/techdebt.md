@@ -14,7 +14,7 @@ Cakupan: seluruh source (`App.js`, `components/`, `context/`, `screens/`, `utils
 | `npx expo export` (Android & iOS) | ✅ bundle berhasil |
 | ESLint (`eslint:recommended` + `react-hooks`) | ✅ 0 error, 0 warning (di luar `console` yang dibungkus `__DEV__`) |
 | `npm audit` | ⚠️ 35 vulnerability transitif (2 critical, 16 high, 16 moderate, 1 low) — setelah TD-01: 24 (0 critical, 3 high); setelah TD-02: 10 (0 high, 3 moderate, 7 low) |
-| Test otomatis | ❌ tidak ada — setelah TD-03: ✅ 42 test (Jest + RNTL); `date.js`, `storage.js`, `MoodContext`, `MoodPicker` 100% line |
+| Test otomatis | ❌ tidak ada — setelah TD-03: ✅ 42 test (Jest + RNTL); `date.js`, `storage.js`, `MoodContext`, `MoodPicker` 100% line; setelah TD-04: 57 test |
 
 ## Ringkasan
 
@@ -138,6 +138,23 @@ build/dev** (Metro, Expo CLI) dan tidak ikut ke bundle aplikasi, sehingga dimasu
 - **Detail:** statistik mencocokkan `m.mood.label === meta.label`. Mengubah label/emoji di satu tempat akan
   membuat data lama tidak terhitung, dan skor rata-rata jatuh ke default `3`.
 - **Aksi:** buat `constants/moods.js` sebagai satu sumber (tambahkan field `score`), cocokkan berdasarkan `id`.
+- **Status (2026-11-25): ✅ selesai** — branch `fix/td-04-mood-constants` (dari `fix/td-03-tests`).
+  - `constants/moods.js` menjadi satu-satunya definisi mood (`id`, `emoji`, `label`, `color`, `score`),
+    di-`Object.freeze`, plus helper `getMoodById(id)`. Komentar di file menegaskan `id` permanen karena
+    sudah tersimpan di histori; field lain boleh diubah.
+  - `MoodPicker` dan `InsightScreen` memakai konstanta tersebut; `MOODS_META` dan `moodScore` dihapus.
+  - Distribusi mood, mood terbanyak, dan rata-rata dicocokkan via `entry.mood.id` (aman: `id` 1–5 sudah ada
+    sejak commit awal, jadi semua entri lama ikut terhitung). `key` bar chart memakai `id`.
+  - Perubahan perilaku: entri dengan `id` tidak dikenal **dilewati** saat menghitung rata-rata (sebelumnya
+    dianggap skor `3`); bila tidak ada entri yang dikenal, rata-rata tampil `-`.
+  - `HomeScreen` menyimpan snapshot `{ id, emoji, label, color }` secara eksplisit sehingga `score` tidak ikut
+    tersimpan — format data tersimpan tidak berubah.
+  - Test: `constants/__tests__/moods.test.js` (id 1–5 tetap, field lengkap, skor 5→1, frozen, `getMoodById`)
+    dan `screens/__tests__/InsightScreen.test.jsx` (top mood & rata-rata via id, entri lama dengan label/emoji
+    berbeda tetap terhitung, id tak dikenal dilewati, empty state). Total 57 test lulus, termasuk dengan cache
+    Jest kosong. Uji mutasi: mengembalikan pencocokan ke `label` → test entri lama gagal.
+  - **Sisa:** perhitungan per mood masih dilakukan dua kali di `InsightScreen` (TD-05); `HistoryScreen` dan
+    "7 Hari Terakhir" masih menampilkan emoji/warna dari snapshot tersimpan (TD-10).
 
 ---
 
@@ -246,7 +263,7 @@ build/dev** (Metro, Expo CLI) dan tidak ikut ke bundle aplikasi, sehingga dimasu
 ## Rekomendasi Urutan Pengerjaan
 
 1. **Segera:** TD-01 (`npm audit fix` non-breaking) dan TD-11 (lint/format di repo) — murah, mencegah regresi.
-2. **Sprint berikutnya:** ~~TD-03 (setup test + test untuk `date.js` & `storage.js`)~~ ✅, lalu TD-04 dan TD-05
+2. **Sprint berikutnya:** ~~TD-03 (setup test + test untuk `date.js` & `storage.js`)~~ ✅, ~~TD-04~~ ✅, lalu TD-05
    (konstanta mood tunggal + `useMoodStats`) karena saling terkait dan menyentuh data pengguna.
 3. **Berikutnya:** TD-06 s.d. TD-10 (notifikasi, storage, skema data) dalam satu paket refactor data layer.
 4. **Kuartal ini:** ~~TD-02 (upgrade SDK bertahap)~~ ✅, TD-12 (TypeScript), TD-13 (aksesibilitas), TD-14 (theme).

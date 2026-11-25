@@ -40,9 +40,12 @@ export default function HomeScreen() {
 
     setIsSaving(true);
     try {
+      // Simpan snapshot tampilan saja; `score` sengaja tidak ikut disimpan
+      // karena statistik selalu membacanya dari constants/moods.js via `id`.
+      const { id: moodId, emoji, label, color } = selectedMood;
       await addMood({
         id: Date.now().toString(),
-        mood: selectedMood,
+        mood: { id: moodId, emoji, label, color },
         note: note.trim(),
         date: new Date().toISOString(),
       });

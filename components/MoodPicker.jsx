@@ -7,16 +7,7 @@ import {
 } from "react-native";
 import { useRef } from "react";
 import * as Haptics from "expo-haptics";
-
-//Data mood kita definisikan di luar komponen
-// karena nilainya tidak pernah berubah (konstanta)
-const MOODS = [
-  { id: 1, emoji: "😄", label: "Great", color: "#4CAF50" },
-  { id: 2, emoji: "🙂", label: "Good", color: "#8BC34A" },
-  { id: 3, emoji: "😐", label: "Okay", color: "#FFC107" },
-  { id: 4, emoji: "😔", label: "Bad", color: "#FF9800" },
-  { id: 5, emoji: "😢", label: "Awful", color: "#F44336" },
-];
+import { MOODS } from "../constants/moods";
 
 // Komponen terpisah untuk setiap tombol mood
 // agar setiap tombol punya animated value sendiri

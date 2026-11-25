@@ -18,14 +18,7 @@ import {
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { toLocalDateKey, calculateStreak } from "../utils/date";
-
-const MOODS_META = [
-  { label: "Great", emoji: "😄", color: "#4CAF50" },
-  { label: "Good", emoji: "🙂", color: "#8BC34A" },
-  { label: "Okay", emoji: "😐", color: "#FFC107" },
-  { label: "Bad", emoji: "😔", color: "#FF9800" },
-  { label: "Awful", emoji: "😢", color: "#F44336" },
-];
+import { MOODS, getMoodById } from "../constants/moods";
 
 // ─── Sub-komponen: Kartu Statistik Ringkas ───────────────────
 function StatCard({ emoji, label, value, color }) {
@@ -100,9 +93,9 @@ function MoodBarChart({ moods }) {
   if (moods.length === 0) return null;
 
   // Hitung jumlah setiap mood
-  const counts = MOODS_META.map((meta) => ({
+  const counts = MOODS.map((meta) => ({
     ...meta,
-    count: moods.filter((m) => m.mood.label === meta.label).length,
+    count: moods.filter((m) => m.mood?.id === meta.id).length,
   }));
 
   const maxCount = Math.max(...counts.map((c) => c.count), 1);
@@ -112,7 +105,7 @@ function MoodBarChart({ moods }) {
       <Text style={styles.sectionTitle}>Distribusi Mood</Text>
       {counts.map((item, index) => (
         <MoodBar
-          key={item.label}
+          key={item.id}
           item={item}
           maxCount={maxCount}
           index={index}
@@ -242,23 +235,25 @@ export default function InsightScreen() {
   const totalMoods = moods.length;
 
   // Mood terbanyak
-  const moodCounts = MOODS_META.map((meta) => ({
+  const moodCounts = MOODS.map((meta) => ({
     ...meta,
-    count: moods.filter((m) => m.mood.label === meta.label).length,
+    count: moods.filter((m) => m.mood?.id === meta.id).length,
   }));
   const topMood = moodCounts.reduce(
     (best, curr) => (curr.count > best.count ? curr : best),
     { count: 0 },
   );
 
-  // Rata-rata mood (Great=5, Good=4, Okay=3, Bad=2, Awful=1)
-  const moodScore = { Great: 5, Good: 4, Okay: 3, Bad: 2, Awful: 1 };
+  // Rata-rata mood berdasarkan `score` di constants/moods.js.
+  // Entri dengan id tidak dikenal dilewati, bukan dianggap "Okay" (3).
+  const scores = moods
+    .map((m) => getMoodById(m.mood?.id)?.score)
+    .filter((score) => score !== undefined);
   const avgScore =
-    moods.length > 0
-      ? (
-          moods.reduce((sum, m) => sum + (moodScore[m.mood.label] || 3), 0) /
-          moods.length
-        ).toFixed(1)
+    scores.length > 0
+      ? (scores.reduce((sum, score) => sum + score, 0) / scores.length).toFixed(
+          1,
+        )
       : "-";
 
   // Streak — berapa hari berturut-turut mencatat mood (tanggal lokal)
