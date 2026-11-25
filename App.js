@@ -30,7 +30,7 @@ export default function App() {
         "expo-notifications"
       );
       subscription = addNotificationResponseReceivedListener((response) => {
-        console.log("Notifikasi di-tap:", response);
+        if (__DEV__) console.log("Notifikasi di-tap:", response);
       });
     };
     setup();

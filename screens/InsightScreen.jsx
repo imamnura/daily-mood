@@ -16,6 +16,8 @@ import {
   getScheduledReminders,
 } from "../utils/notifications";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { toLocalDateKey, calculateStreak } from "../utils/date";
 
 const MOODS_META = [
   { label: "Great", emoji: "😄", color: "#4CAF50" },
@@ -39,7 +41,7 @@ function StatCard({ emoji, label, value, color }) {
         useNativeDriver: true,
       }),
     ]).start();
-  }, []);
+  }, [scaleAnim, opacityAnim]);
 
   return (
     <Animated.View
@@ -52,6 +54,44 @@ function StatCard({ emoji, label, value, color }) {
       <Text style={[styles.statValue, { color }]}>{value}</Text>
       <Text style={styles.statLabel}>{label}</Text>
     </Animated.View>
+  );
+}
+
+// ─── Sub-komponen: Satu Bar pada Chart ───────────────────────
+// Dipisah jadi komponen sendiri agar hook tidak dipanggil di dalam loop
+// (Rules of Hooks) — setiap bar punya animated value sendiri.
+function MoodBar({ item, maxCount, index }) {
+  const widthAnim = useRef(new Animated.Value(0)).current;
+  const targetWidth = (item.count / maxCount) * 100;
+
+  useEffect(() => {
+    Animated.timing(widthAnim, {
+      toValue: targetWidth,
+      duration: 600,
+      delay: index * 100, // stagger per bar
+      useNativeDriver: false, // false karena animasi width (layout property)
+    }).start();
+  }, [widthAnim, targetWidth, index]);
+
+  return (
+    <View style={styles.barRow}>
+      <Text style={styles.barEmoji}>{item.emoji}</Text>
+      <View style={styles.barTrack}>
+        <Animated.View
+          style={[
+            styles.barFill,
+            {
+              backgroundColor: item.color,
+              width: widthAnim.interpolate({
+                inputRange: [0, 100],
+                outputRange: ["0%", "100%"],
+              }),
+            },
+          ]}
+        />
+      </View>
+      <Text style={styles.barCount}>{item.count}</Text>
+    </View>
   );
 }
 
@@ -70,40 +110,14 @@ function MoodBarChart({ moods }) {
   return (
     <View style={styles.chartContainer}>
       <Text style={styles.sectionTitle}>Distribusi Mood</Text>
-      {counts.map((item) => {
-        // Animasi bar width
-        const widthAnim = useRef(new Animated.Value(0)).current;
-
-        useEffect(() => {
-          Animated.timing(widthAnim, {
-            toValue: (item.count / maxCount) * 100,
-            duration: 600,
-            delay: MOODS_META.indexOf(item) * 100, // stagger per bar
-            useNativeDriver: false, // false karena animasi width (layout property)
-          }).start();
-        }, [item.count]);
-
-        return (
-          <View key={item.label} style={styles.barRow}>
-            <Text style={styles.barEmoji}>{item.emoji}</Text>
-            <View style={styles.barTrack}>
-              <Animated.View
-                style={[
-                  styles.barFill,
-                  {
-                    backgroundColor: item.color,
-                    width: widthAnim.interpolate({
-                      inputRange: [0, 100],
-                      outputRange: ["0%", "100%"],
-                    }),
-                  },
-                ]}
-              />
-            </View>
-            <Text style={styles.barCount}>{item.count}</Text>
-          </View>
-        );
-      })}
+      {counts.map((item, index) => (
+        <MoodBar
+          key={item.label}
+          item={item}
+          maxCount={maxCount}
+          index={index}
+        />
+      ))}
     </View>
   );
 }
@@ -116,45 +130,66 @@ function NotificationSetting() {
   // Cek apakah sudah ada reminder aktif saat komponen mount
   useEffect(() => {
     const checkReminder = async () => {
-      const reminders = await getScheduledReminders();
-      setIsEnabled(reminders.length > 0);
+      try {
+        const reminders = await getScheduledReminders();
+        setIsEnabled(reminders.length > 0);
 
-      // Load jam yang tersimpan
-      const savedHour = await AsyncStorage.getItem("reminderHour");
-      if (savedHour) setReminderHour(parseInt(savedHour));
+        // Load jam yang tersimpan
+        const savedHour = await AsyncStorage.getItem("reminderHour");
+        if (savedHour) setReminderHour(parseInt(savedHour, 10));
+      } catch (error) {
+        if (__DEV__) console.warn("Gagal membaca status reminder", error);
+      }
     };
     checkReminder();
   }, []);
 
+  const showScheduleError = () => {
+    Alert.alert("Gagal", "Reminder gagal dijadwalkan. Coba lagi nanti.");
+  };
+
   const toggleReminder = async (value) => {
-    if (value) {
-      const success = await scheduleDailyReminder(reminderHour, 0);
-      if (success) {
-        setIsEnabled(true);
-        Alert.alert(
-          "Reminder aktif! ✅",
-          `Kamu akan diingatkan setiap jam ${reminderHour}:00`,
-        );
+    try {
+      if (value) {
+        const success = await scheduleDailyReminder(reminderHour, 0);
+        if (success) {
+          setIsEnabled(true);
+          Alert.alert(
+            "Reminder aktif! ✅",
+            `Kamu akan diingatkan setiap jam ${reminderHour}:00`,
+          );
+        } else {
+          Alert.alert(
+            "Gagal",
+            "Izin notifikasi diperlukan. Aktifkan di Settings HP kamu.",
+          );
+        }
       } else {
-        Alert.alert(
-          "Gagal",
-          "Izin notifikasi diperlukan. Aktifkan di Settings HP kamu.",
-        );
+        await cancelAllReminders();
+        setIsEnabled(false);
       }
-    } else {
-      await cancelAllReminders();
-      setIsEnabled(false);
+    } catch (error) {
+      if (__DEV__) console.warn("Gagal mengubah reminder", error);
+      showScheduleError();
     }
   };
 
   const changeHour = async (delta) => {
     const newHour = Math.min(23, Math.max(6, reminderHour + delta));
+    if (newHour === reminderHour) return;
     setReminderHour(newHour);
-    await AsyncStorage.setItem("reminderHour", newHour.toString());
 
-    // Update jadwal kalau reminder aktif
-    if (isEnabled) {
-      await scheduleDailyReminder(newHour, 0);
+    try {
+      await AsyncStorage.setItem("reminderHour", newHour.toString());
+
+      // Update jadwal kalau reminder aktif
+      if (isEnabled) {
+        const success = await scheduleDailyReminder(newHour, 0);
+        if (!success) showScheduleError();
+      }
+    } catch (error) {
+      if (__DEV__) console.warn("Gagal mengubah jam reminder", error);
+      showScheduleError();
     }
   };
 
@@ -216,33 +251,6 @@ export default function InsightScreen() {
     { count: 0 },
   );
 
-  // Hitung streak — berapa hari berturut-turut mencatat mood
-  const calculateStreak = () => {
-    if (moods.length === 0) return 0;
-
-    // Ambil tanggal unik yang sudah di-record (format YYYY-MM-DD)
-    const uniqueDates = [...new Set(moods.map((m) => m.date.split("T")[0]))]
-      .sort()
-      .reverse(); // urutkan dari terbaru
-
-    let streak = 0;
-    let checkDate = new Date();
-    checkDate.setHours(0, 0, 0, 0);
-
-    for (const dateStr of uniqueDates) {
-      const date = new Date(dateStr);
-      const diffDays = Math.round((checkDate - date) / (1000 * 60 * 60 * 24));
-
-      if (diffDays === 0 || diffDays === 1) {
-        streak++;
-        checkDate = date;
-      } else {
-        break; // Streak terputus
-      }
-    }
-    return streak;
-  };
-
   // Rata-rata mood (Great=5, Good=4, Okay=3, Bad=2, Awful=1)
   const moodScore = { Great: 5, Good: 4, Okay: 3, Bad: 2, Awful: 1 };
   const avgScore =
@@ -253,68 +261,74 @@ export default function InsightScreen() {
         ).toFixed(1)
       : "-";
 
-  const streak = calculateStreak();
+  // Streak — berapa hari berturut-turut mencatat mood (tanggal lokal)
+  const streak = calculateStreak(moods.map((m) => m.date));
 
   // ── Render ──
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.title}>Insights 📊</Text>
+    <SafeAreaView style={styles.container} edges={["top"]}>
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={styles.content}
+      >
+        <Text style={styles.title}>Insights 📊</Text>
 
-      {/* Empty state */}
-      {totalMoods === 0 ? (
-        <View style={styles.emptyContainer}>
-          <Text style={styles.emptyEmoji}>🌱</Text>
-          <Text style={styles.emptyTitle}>Belum ada data</Text>
-          <Text style={styles.emptySubtitle}>
-            Mulai catat moodmu untuk melihat insights!
-          </Text>
-        </View>
-      ) : (
-        <>
-          {/* Kartu statistik ringkas */}
-          <View style={styles.statsGrid}>
-            <StatCard
-              emoji="📝"
-              label="Total Catatan"
-              value={totalMoods}
-              color="#6C63FF"
-            />
-            <StatCard
-              emoji="🔥"
-              label="Streak"
-              value={`${streak} hari`}
-              color="#FF6B35"
-            />
-            <StatCard
-              emoji={topMood.emoji || "😐"}
-              label="Mood Terbanyak"
-              value={topMood.label || "-"}
-              color={topMood.color || "#757575"}
-            />
-            <StatCard
-              emoji="⭐"
-              label="Rata-rata"
-              value={avgScore}
-              color="#FFC107"
-            />
+        {/* Empty state */}
+        {totalMoods === 0 ? (
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyEmoji}>🌱</Text>
+            <Text style={styles.emptyTitle}>Belum ada data</Text>
+            <Text style={styles.emptySubtitle}>
+              Mulai catat moodmu untuk melihat insights!
+            </Text>
           </View>
+        ) : (
+          <>
+            {/* Kartu statistik ringkas */}
+            <View style={styles.statsGrid}>
+              <StatCard
+                emoji="📝"
+                label="Total Catatan"
+                value={totalMoods}
+                color="#6C63FF"
+              />
+              <StatCard
+                emoji="🔥"
+                label="Streak"
+                value={`${streak} hari`}
+                color="#FF6B35"
+              />
+              <StatCard
+                emoji={topMood.emoji || "😐"}
+                label="Mood Terbanyak"
+                value={topMood.label || "-"}
+                color={topMood.color || "#757575"}
+              />
+              <StatCard
+                emoji="⭐"
+                label="Rata-rata"
+                value={avgScore}
+                color="#FFC107"
+              />
+            </View>
 
-          {/* Bar chart */}
-          <View style={styles.card}>
-            <MoodBarChart moods={moods} />
-          </View>
+            {/* Bar chart */}
+            <View style={styles.card}>
+              <MoodBarChart moods={moods} />
+            </View>
 
-          {/* Mood 7 hari terakhir */}
-          <View style={styles.card}>
-            <Text style={styles.sectionTitle}>7 Hari Terakhir</Text>
-            <LastSevenDays moods={moods} />
-          </View>
-        </>
-      )}
+            {/* Mood 7 hari terakhir */}
+            <View style={styles.card}>
+              <Text style={styles.sectionTitle}>7 Hari Terakhir</Text>
+              <LastSevenDays moods={moods} />
+            </View>
+          </>
+        )}
 
-      {/* Setting notifikasi — selalu tampil */}
-      <NotificationSetting />
-    </ScrollView>
+        {/* Setting notifikasi — selalu tampil */}
+        <NotificationSetting />
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
@@ -324,10 +338,10 @@ function LastSevenDays({ moods }) {
   const days = Array.from({ length: 7 }, (_, i) => {
     const date = new Date();
     date.setDate(date.getDate() - (6 - i)); // 6 hari lalu sampai hari ini
-    const dateStr = date.toISOString().split("T")[0];
+    const dateStr = toLocalDateKey(date);
 
-    // Cari mood di hari ini
-    const entry = moods.find((m) => m.date.split("T")[0] === dateStr);
+    // Cari mood terbaru di hari tersebut (moods sudah urut terbaru dulu)
+    const entry = moods.find((m) => toLocalDateKey(m.date) === dateStr);
 
     return {
       dateStr,

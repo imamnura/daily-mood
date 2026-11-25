@@ -44,11 +44,14 @@ export async function scheduleDailyReminder(hour = 20, minute = 0) {
       body: "Jangan lupa catat moodmu hari ini!",
       sound: true,
     },
+    // Sejak SDK 52 trigger WAJIB punya `type`. Tanpa `type`, Android
+    // menganggapnya trigger "channel" (notifikasi muncul seketika, tidak
+    // berulang) dan iOS menolaknya sebagai trigger tidak valid.
     trigger: {
+      type: Notifications.SchedulableTriggerInputTypes.DAILY, // Ulangi setiap hari
       hour,
       minute,
-      repeats: true, // Ulangi setiap hari
-      channelId: Platform.OS === "android" ? "default" : undefined,
+      channelId: "default", // Diabaikan di iOS
     },
   });
 

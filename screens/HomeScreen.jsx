@@ -10,6 +10,7 @@ import {
   Platform,
 } from "react-native";
 import { useState } from "react";
+import { SafeAreaView } from "react-native-safe-area-context";
 import MoodPicker from "../components/MoodPicker";
 import { useMood } from "../context/MoodContext";
 
@@ -52,7 +53,7 @@ export default function HomeScreen() {
       );
       setSelectedMood(null);
       setNote("");
-    } catch (error) {
+    } catch {
       Alert.alert("Error", "Gagal menyimpan mood. Coba lagi.");
     } finally {
       setIsSaving(false); // finally selalu dijalankan, error atau tidak
@@ -60,68 +61,74 @@ export default function HomeScreen() {
   };
 
   return (
+    // SafeAreaView agar konten tidak tertutup notch / status bar
     // KeyboardAvoidingView mencegah keyboard menutupi input
     // behavior 'padding' di IOS, 'height' di Android
-    <KeyboardAvoidingView
-      style={{ flex: 1 }}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-    >
-      <ScrollView
-        style={styles.container}
-        contentContainerStyle={styles.content}
-        // Keyboard dismiss saat scroll
-        keyboardShouldPersistTaps="handled"
+    <SafeAreaView style={styles.container} edges={["top"]}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
-        {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.greeting}>Halo! 👋</Text>
-          <Text style={styles.date}>{getFormattedDate()}</Text>
-        </View>
-
-        {/* Card Utama */}
-        <View style={styles.card}>
-          <Text style={styles.question}>
-            Bagaimana perasaanmu{"\n"} hari ini ?
-          </Text>
-
-          <MoodPicker
-            selectedMood={selectedMood}
-            onSelectMood={setSelectedMood}
-          />
-        </View>
-
-        {/* Notes */}
-        <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Catatan (opsional)</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Ceritakan lebih lanjut..."
-            placeholderTextColor={"#BDBDBD"}
-            value={note}
-            onChangeText={setNote}
-            multiline
-            numberOfLines={4}
-            maxLength={200}
-            textAlignVertical="top" //Text mulai dari atas (Android)
-          />
-          <Text style={styles.charCount}>{note.length}/200</Text>
-        </View>
-
-        {/* Button Save */}
-        <TouchableOpacity
-          style={[
-            styles.saveButton,
-            // Tombol disabled kalo belum pilih mood
-            !selectedMood && styles.saveButtonDisabled,
-          ]}
-          onPress={handleSave}
-          disabled={isSaving}
-          activeOpacity={0.8}
+        <ScrollView
+          style={styles.container}
+          contentContainerStyle={styles.content}
+          // Keyboard dismiss saat scroll
+          keyboardShouldPersistTaps="handled"
         >
-          <Text style={styles.saveButtonText}>Simpan Mood</Text>
-        </TouchableOpacity>
-      </ScrollView>
-    </KeyboardAvoidingView>
+          {/* Header */}
+          <View style={styles.header}>
+            <Text style={styles.greeting}>Halo! 👋</Text>
+            <Text style={styles.date}>{getFormattedDate()}</Text>
+          </View>
+
+          {/* Card Utama */}
+          <View style={styles.card}>
+            <Text style={styles.question}>
+              Bagaimana perasaanmu{"\n"} hari ini ?
+            </Text>
+
+            <MoodPicker
+              selectedMood={selectedMood}
+              onSelectMood={setSelectedMood}
+            />
+          </View>
+
+          {/* Notes */}
+          <View style={styles.card}>
+            <Text style={styles.sectionTitle}>Catatan (opsional)</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Ceritakan lebih lanjut..."
+              placeholderTextColor={"#BDBDBD"}
+              value={note}
+              onChangeText={setNote}
+              multiline
+              numberOfLines={4}
+              maxLength={200}
+              textAlignVertical="top" //Text mulai dari atas (Android)
+            />
+            <Text style={styles.charCount}>{note.length}/200</Text>
+          </View>
+
+          {/* Button Save */}
+          <TouchableOpacity
+            style={[
+              styles.saveButton,
+              // Tombol disabled kalo belum pilih mood
+              // (tetap bisa ditekan agar muncul alert "pilih mood dulu")
+              (!selectedMood || isSaving) && styles.saveButtonDisabled,
+            ]}
+            onPress={handleSave}
+            disabled={isSaving}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.saveButtonText}>
+              {isSaving ? "Menyimpan..." : "Simpan Mood"}
+            </Text>
+          </TouchableOpacity>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 

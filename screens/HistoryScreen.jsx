@@ -7,6 +7,7 @@ import {
   Alert,
   ActivityIndicator,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useMood } from "../context/MoodContext";
 import { formatDate, formatTime } from "../utils/storage";
 
@@ -76,14 +77,14 @@ export default function HistoryScreen() {
 
   if (isLoading) {
     return (
-      <View style={styles.loadingContainer}>
+      <SafeAreaView style={styles.loadingContainer} edges={["top"]}>
         <ActivityIndicator size={"large"} color={"#6C63FF"} />
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={["top"]}>
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.title}>Histori Mood</Text>
@@ -103,14 +104,9 @@ export default function HistoryScreen() {
           styles.list,
           moods.length === 0 && styles.listEmpty,
         ]}
-        // Performa: memberitahu Flatlist bahwa tinggi item sama
-        // sehingga tidak perlu di kalkulasi ulang
-        // getItemLayout={(data, index) => (
-        //   { length: ITEM_HEIGHT, offset: ITEM_HEIGHT * index, index }
-        // )}
         showsVerticalScrollIndicator={false}
       />
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -119,7 +115,8 @@ const styles = StyleSheet.create({
   loadingContainer: {
     flex: 1,
     alignItems: "center",
-    justifyContent: "space-between",
+    justifyContent: "center",
+    backgroundColor: "#F8F9FA",
   },
   header: {
     paddingHorizontal: 20,

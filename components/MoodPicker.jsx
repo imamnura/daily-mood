@@ -20,7 +20,7 @@ const MOODS = [
 
 // Komponen terpisah untuk setiap tombol mood
 // agar setiap tombol punya animated value sendiri
-function MoodBotton({ mood, isSelected, onSelect }) {
+function MoodButton({ mood, isSelected, onSelect }) {
   // setiap button mempunyai scale animation sendiri
   const scaleAnim = useRef(new Animated.Value(1)).current;
 
@@ -87,7 +87,7 @@ export default function MoodPicker({ selectedMood, onSelectMood }) {
     <View>
       <View style={styles.row}>
         {MOODS.map((mood) => (
-          <MoodBotton
+          <MoodButton
             key={mood.id}
             mood={mood}
             isSelected={selectedMood?.id === mood.id}
