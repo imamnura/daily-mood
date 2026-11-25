@@ -14,7 +14,7 @@ Cakupan: seluruh source (`App.js`, `components/`, `context/`, `screens/`, `utils
 | `npx expo export` (Android & iOS) | ✅ bundle berhasil |
 | ESLint (`eslint:recommended` + `react-hooks`) | ✅ 0 error, 0 warning (di luar `console` yang dibungkus `__DEV__`) |
 | `npm audit` | ⚠️ 35 vulnerability transitif (2 critical, 16 high, 16 moderate, 1 low) — setelah TD-01: 24 (0 critical, 3 high); setelah TD-02: 10 (0 high, 3 moderate, 7 low) |
-| Test otomatis | ❌ tidak ada — setelah TD-03: ✅ 42 test (Jest + RNTL); `date.js`, `storage.js`, `MoodContext`, `MoodPicker` 100% line; setelah TD-04: 57 test |
+| Test otomatis | ❌ tidak ada — setelah TD-03: ✅ 42 test (Jest + RNTL); `date.js`, `storage.js`, `MoodContext`, `MoodPicker` 100% line; setelah TD-04: 57 test; setelah TD-05: 69 test |
 
 ## Ringkasan
 
@@ -129,8 +129,8 @@ build/dev** (Metro, Expo CLI) dan tidak ikut ke bundle aplikasi, sehingga dimasu
   - Uji mutasi manual: mengembalikan `toLocalDateKey` ke `toISOString()` → 7 test gagal; membuat jalur tulis
     menelan error korup → 6 test gagal.
   - `npm audit` naik 10 → 29 karena `glob`/`minimatch` lama di rantai Jest (moderate, dev-only, tidak masuk bundle).
-  - **Sisa:** prioritas 3 (statistik Insight) menunggu ekstraksi `useMoodStats` di TD-05; `notifications.js`
-    dan screen belum punya test.
+  - **Sisa:** ~~prioritas 3 (statistik Insight) menunggu ekstraksi `useMoodStats` di TD-05~~ ✅ (lihat TD-05);
+    `notifications.js` dan sebagian besar screen belum punya test.
 
 ### TD-04 — Definisi mood terduplikasi di 3 tempat dan dicocokkan via `label`
 - **Lokasi:** `components/MoodPicker.jsx:13` (`MOODS`), `screens/InsightScreen.jsx:22` (`MOODS_META`),
@@ -153,7 +153,7 @@ build/dev** (Metro, Expo CLI) dan tidak ikut ke bundle aplikasi, sehingga dimasu
     dan `screens/__tests__/InsightScreen.test.jsx` (top mood & rata-rata via id, entri lama dengan label/emoji
     berbeda tetap terhitung, id tak dikenal dilewati, empty state). Total 57 test lulus, termasuk dengan cache
     Jest kosong. Uji mutasi: mengembalikan pencocokan ke `label` → test entri lama gagal.
-  - **Sisa:** perhitungan per mood masih dilakukan dua kali di `InsightScreen` (TD-05); `HistoryScreen` dan
+  - **Sisa:** ~~perhitungan per mood masih dilakukan dua kali di `InsightScreen` (TD-05)~~ ✅; `HistoryScreen` dan
     "7 Hari Terakhir" masih menampilkan emoji/warna dari snapshot tersimpan (TD-10).
 
 ---
@@ -165,6 +165,23 @@ build/dev** (Metro, Expo CLI) dan tidak ikut ke bundle aplikasi, sehingga dimasu
   `:249` (`topMood`), `:256` (`avgScore`)
 - **Aksi:** ekstrak ke `hooks/useMoodStats.js` (dibungkus `useMemo`) sehingga bisa di-test dan tidak dihitung
   ulang setiap render.
+- **Status (2026-11-25): ✅ selesai** — branch `fix/td-05-mood-stats` (dari `fix/td-04-mood-constants`).
+  - `hooks/useMoodStats.js` berisi fungsi murni `computeMoodStats(moods, today)` dan hook
+    `useMoodStats(moods)`. Hitungan per mood, rata-rata, dan count dilakukan dalam **satu kali iterasi**;
+    hasilnya `{ total, counts, topMood, avgScore, streak }`.
+  - Hook dibungkus `useMemo` dengan dependency `[moods, todayKey]` — tanggal lokal hari ini ikut jadi
+    dependency agar streak tidak basi bila layar dirender ulang setelah tengah malam.
+  - `InsightScreen` hanya memanggil hook; `MoodBarChart` menerima `counts` sebagai prop, tidak lagi menghitung
+    sendiri. Pembulatan rata-rata (`toFixed(1)`) dan fallback `-` dipindah ke lapisan tampilan; hook
+    mengembalikan angka mentah / `null`.
+  - Perilaku tampilan tidak berubah: test `InsightScreen` dari TD-04 tetap lulus tanpa diubah. Bila jumlah
+    seri, mood yang lebih positif (lebih dulu di `MOODS`) tetap menang, sekarang terdokumentasi dan di-test.
+  - Test: `hooks/__tests__/useMoodStats.test.js` (12 test) — histori kosong, count per mood, topMood & seri,
+    rata-rata tanpa pembulatan, id tak dikenal dilewati, streak tanggal lokal, memo tidak hitung ulang untuk
+    histori yang sama, hitung ulang saat histori berubah, dan hitung ulang setelah lewat tengah malam.
+    `useMoodStats.js` 100% coverage; total 69 test. Uji mutasi: menghapus `todayKey` dari dependency,
+    mengubah aturan seri, atau membuang `useMemo` → masing-masing membuat 1 test gagal.
+  - Ini juga menuntaskan prioritas 3 TD-03 (test statistik Insight).
 
 ### TD-06 — Akses `AsyncStorage` langsung dari screen
 - **Lokasi:** `screens/InsightScreen.jsx:138`, `:183` (key `"reminderHour"`)
@@ -263,7 +280,7 @@ build/dev** (Metro, Expo CLI) dan tidak ikut ke bundle aplikasi, sehingga dimasu
 ## Rekomendasi Urutan Pengerjaan
 
 1. **Segera:** TD-01 (`npm audit fix` non-breaking) dan TD-11 (lint/format di repo) — murah, mencegah regresi.
-2. **Sprint berikutnya:** ~~TD-03 (setup test + test untuk `date.js` & `storage.js`)~~ ✅, ~~TD-04~~ ✅, lalu TD-05
+2. **Sprint berikutnya:** ~~TD-03 (setup test + test untuk `date.js` & `storage.js`)~~ ✅, ~~TD-04~~ ✅, ~~TD-05~~ ✅
    (konstanta mood tunggal + `useMoodStats`) karena saling terkait dan menyentuh data pengguna.
 3. **Berikutnya:** TD-06 s.d. TD-10 (notifikasi, storage, skema data) dalam satu paket refactor data layer.
 4. **Kuartal ini:** ~~TD-02 (upgrade SDK bertahap)~~ ✅, TD-12 (TypeScript), TD-13 (aksesibilitas), TD-14 (theme).

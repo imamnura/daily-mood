@@ -21,6 +21,7 @@ module.exports = {
   },
   collectCoverageFrom: [
     "constants/**/*.js",
+    "hooks/**/*.js",
     "utils/**/*.js",
     "context/**/*.{js,jsx}",
     "components/**/*.{js,jsx}",

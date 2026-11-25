@@ -17,8 +17,8 @@ import {
 } from "../utils/notifications";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { toLocalDateKey, calculateStreak } from "../utils/date";
-import { MOODS, getMoodById } from "../constants/moods";
+import { toLocalDateKey } from "../utils/date";
+import { useMoodStats } from "../hooks/useMoodStats";
 
 // ─── Sub-komponen: Kartu Statistik Ringkas ───────────────────
 function StatCard({ emoji, label, value, color }) {
@@ -89,15 +89,8 @@ function MoodBar({ item, maxCount, index }) {
 }
 
 // ─── Sub-komponen: Bar Chart Sederhana ───────────────────────
-function MoodBarChart({ moods }) {
-  if (moods.length === 0) return null;
-
-  // Hitung jumlah setiap mood
-  const counts = MOODS.map((meta) => ({
-    ...meta,
-    count: moods.filter((m) => m.mood?.id === meta.id).length,
-  }));
-
+// `counts` berasal dari useMoodStats (sudah dihitung sekali di screen).
+function MoodBarChart({ counts }) {
   const maxCount = Math.max(...counts.map((c) => c.count), 1);
 
   return (
@@ -231,33 +224,13 @@ function NotificationSetting() {
 export default function InsightScreen() {
   const { moods } = useMood();
 
-  // ── Kalkulasi statistik ──
-  const totalMoods = moods.length;
-
-  // Mood terbanyak
-  const moodCounts = MOODS.map((meta) => ({
-    ...meta,
-    count: moods.filter((m) => m.mood?.id === meta.id).length,
-  }));
-  const topMood = moodCounts.reduce(
-    (best, curr) => (curr.count > best.count ? curr : best),
-    { count: 0 },
-  );
-
-  // Rata-rata mood berdasarkan `score` di constants/moods.js.
-  // Entri dengan id tidak dikenal dilewati, bukan dianggap "Okay" (3).
-  const scores = moods
-    .map((m) => getMoodById(m.mood?.id)?.score)
-    .filter((score) => score !== undefined);
-  const avgScore =
-    scores.length > 0
-      ? (scores.reduce((sum, score) => sum + score, 0) / scores.length).toFixed(
-          1,
-        )
-      : "-";
-
-  // Streak — berapa hari berturut-turut mencatat mood (tanggal lokal)
-  const streak = calculateStreak(moods.map((m) => m.date));
+  const {
+    total: totalMoods,
+    counts,
+    topMood,
+    avgScore,
+    streak,
+  } = useMoodStats(moods);
 
   // ── Render ──
   return (
@@ -294,22 +267,22 @@ export default function InsightScreen() {
                 color="#FF6B35"
               />
               <StatCard
-                emoji={topMood.emoji || "😐"}
+                emoji={topMood?.emoji ?? "😐"}
                 label="Mood Terbanyak"
-                value={topMood.label || "-"}
-                color={topMood.color || "#757575"}
+                value={topMood?.label ?? "-"}
+                color={topMood?.color ?? "#757575"}
               />
               <StatCard
                 emoji="⭐"
                 label="Rata-rata"
-                value={avgScore}
+                value={avgScore === null ? "-" : avgScore.toFixed(1)}
                 color="#FFC107"
               />
             </View>
 
             {/* Bar chart */}
             <View style={styles.card}>
-              <MoodBarChart moods={moods} />
+              <MoodBarChart counts={counts} />
             </View>
 
             {/* Mood 7 hari terakhir */}
